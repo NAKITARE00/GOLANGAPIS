@@ -4,8 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/NAKITAREOO/GOLANGAPIS/configs"
-	database "github.com/NAKITAREOO/GOLANGAPIS/db"
+	"NIDA/configs"
+	dbase "NIDA/db"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	mysqlMigrate "github.com/golang-migrate/migrate/v4/database/mysql"
@@ -23,7 +24,7 @@ func main() {
 		ParseTime:            true,
 	}
 
-	db, err := database.NewMySQLStorage(cfg)
+	db, err := dbase.NewMySQLStorage(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

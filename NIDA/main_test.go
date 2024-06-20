@@ -1,15 +1,18 @@
 package main
 
-import "testing"
-import "time"
-import "crypto/rand"
-import "crypto/rsa"
-import "github.com/testtify/testify/require"
+import (
+	"crypto/rand"
+	"crypto/rsa"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+)
 
 func TestEncryptDecrypt(t *testing.T) {
 	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
-aesKey:= make([]byte, 32)
+	aesKey:= make([]byte, 32)
 	_, err = rand.Read(aesKey)
 	require.NoError(t, err)
 
