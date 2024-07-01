@@ -1,11 +1,15 @@
 package main
 
 import (
+	dbase "NIDA/db"
 	"bytes"
 	"encoding/xml"
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 )
 
 type ResponseHeader struct {
@@ -30,7 +34,38 @@ type RQVerificationResult struct {
 	Status  StatusSectionBase `xml:"Status"`
 }
 
-func requestQuestionFromNIDA(r *http.Request, nin string) (RQVerificationResult, error) {
+type Question struct {
+	NIN      string `json:"nin" binding:"required"`
+	Question string `json:"question" binding:"required"`
+}
+
+func retrieveMerchantDetails(c *gin.Context, cfg mysql.Config) (merchantID string, err error) {
+	db, err := dbase.NewMySQLStorage(cfg)
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+
+	// query to get merchant details
+	query := "SELECT merchant_name, merchant_id FROM merchants WHERE some_condition = ?"
+	var name, id string
+	err = db.QueryRow(query, "some_value").Scan(&name, &id)
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
+func requestQuestionFromNIDA(c *gin.Context, r *http.Request, cfg mysql.Config) (RQVerificationResult, error) {
+	//Retrieve merchant details
+
+	nin, err := retrieveMerchantDetails(c, cfg)
+
+	if err != nil {
+		return RQVerificationResult{}, err
+	}
+	
 	// Create the XML payload
 	requestPayload := fmt.Sprintf(`<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 		<soap:Header>
@@ -69,6 +104,26 @@ func requestQuestionFromNIDA(r *http.Request, nin string) (RQVerificationResult,
 	}
 
 	return responseEnvelope.Body.Response, nil
+}
+
+func storeQuestion (c *gin.Context, cfg mysql.Config) {
+	var question Question
+	if err := c.ShouldBindJSON(&question); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Add question to the database
+	db, err := dbase.NewMySQLStorage(cfg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer db.Close()
+
+	_, err = db.Exec("INSERT INTO questions (nin, question) VALUES (?, ?)", question.NIN, question.Question)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Question stored successfully"})
 }
 
 func verifyAnswerWithNIDA(nin, rqCode, answer string) (RQVerificationResult, error) {

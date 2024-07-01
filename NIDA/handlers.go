@@ -1,11 +1,13 @@
 package main
 
 import (
+	dbase "NIDA/db"
 	"encoding/xml"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-sql-driver/mysql"
 )
 
 type RequestHeader struct {
@@ -24,6 +26,14 @@ type RequestBody struct {
 type IRequest struct {
 	Header RequestHeader `json:"header"`
 	Body   RequestBody   `json:"body"`
+}
+
+type Merchant struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Telephone string `json:"telephone"`
+	NIN       string `json:"NIN"`
+	Email     string `json:"email"`
 }
 
 func verifyHandler(c *gin.Context) {
@@ -66,4 +76,24 @@ func verifyHandler(c *gin.Context) {
 
 	// Send the question back to the client
 	c.JSON(http.StatusOK, gin.H{"question": questionResponse})
+}
+
+func registerMerchant(c *gin.Context, cfg mysql.Config) {
+	var merchant Merchant
+	if err := c.ShouldBindJSON(&merchant); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Add merchant to the database
+	db, err := dbase.NewMySQLStorage(cfg)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer db.Close()
+
+	_, err = db.Exec("INSERT INTO merchants (firstName, lastName, telephone, NIN, email) VALUES (?, ?, ?, ?, ?)", merchant.FirstName, merchant.LastName, merchant.Telephone, merchant.NIN, merchant.Email)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Merchant registered successfully"})
 }
