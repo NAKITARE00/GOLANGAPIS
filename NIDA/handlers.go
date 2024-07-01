@@ -2,12 +2,12 @@ package main
 
 import (
 	dbase "NIDA/db"
+	"bytes"
 	"encoding/xml"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-sql-driver/mysql"
 )
 
 type RequestHeader struct {
@@ -67,8 +67,15 @@ func verifyHandler(c *gin.Context) {
 		return
 	}
 
+	// Create a HTTP request
+	sampleRequest, err := http.NewRequest("POST", "https://nacer01/TZ_CIG/GatewayService.svc", bytes.NewBuffer([]byte{}))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create dummy request"})
+		return
+	}
+
 	// Request the first question from NIDA
-	questionResponse, err := requestQuestionFromNIDA(r, payload.NIN)
+	questionResponse, err := requestQuestionFromNIDA(c, sampleRequest, payload.NIN)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -78,7 +85,10 @@ func verifyHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"question": questionResponse})
 }
 
-func registerMerchant(c *gin.Context, cfg mysql.Config) {
+func registerMerchant(c *gin.Context) {
+	//retrieve cfg database configuration
+	cfg := initCFG()
+
 	var merchant Merchant
 	if err := c.ShouldBindJSON(&merchant); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -91,9 +101,15 @@ func registerMerchant(c *gin.Context, cfg mysql.Config) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	
 	defer db.Close()
 
 	_, err = db.Exec("INSERT INTO merchants (firstName, lastName, telephone, NIN, email) VALUES (?, ?, ?, ?, ?)", merchant.FirstName, merchant.LastName, merchant.Telephone, merchant.NIN, merchant.Email)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Merchant registered successfully"})
 }

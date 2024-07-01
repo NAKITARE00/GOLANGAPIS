@@ -1,0 +1,7 @@
+
+{
+    "nida_url": "https://nacer01/TZ_CIG/GatewayService.svc",
+    "message_security_pub_key": "NIDACIGSecurity.cer",
+    "stakeholder_priv_key": "PESAPAL.key",
+    "user_id": "PESAPAL"
+}

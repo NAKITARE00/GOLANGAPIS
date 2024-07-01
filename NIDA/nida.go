@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-sql-driver/mysql"
 )
 
 type ResponseHeader struct {
@@ -39,33 +38,31 @@ type Question struct {
 	Question string `json:"question" binding:"required"`
 }
 
-func retrieveMerchantDetails(c *gin.Context, cfg mysql.Config) (merchantID string, err error) {
-	db, err := dbase.NewMySQLStorage(cfg)
-	if err != nil {
-		return "", err
-	}
-	defer db.Close()
 
-	// query to get merchant details
-	query := "SELECT merchant_name, merchant_id FROM merchants WHERE some_condition = ?"
-	var name, id string
-	err = db.QueryRow(query, "some_value").Scan(&name, &id)
-	if err != nil {
-		return "", err
-	}
+// func retrieveMerchantDetails(c *gin.Context) (merchantID string, err error) {
+// 	//retrieve cfg database configuration
 
-	return id, nil
-}
-
-func requestQuestionFromNIDA(c *gin.Context, r *http.Request, cfg mysql.Config) (RQVerificationResult, error) {
-	//Retrieve merchant details
-
-	nin, err := retrieveMerchantDetails(c, cfg)
-
-	if err != nil {
-		return RQVerificationResult{}, err
-	}
+// 	cfg := initCFG()
 	
+// 	db, err := dbase.NewMySQLStorage(cfg)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	defer db.Close()
+
+// 	// query to get merchant details
+// 	query := "SELECT merchant_name, merchant_id FROM merchants WHERE some_condition = ?"
+// 	var name, id string
+// 	err = db.QueryRow(query, "some_value").Scan(&name, &id)
+// 	if err != nil {
+// 		return "", err
+// 	}
+
+// 	return id, nil
+// }
+
+
+func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVerificationResult, error) {
 	// Create the XML payload
 	requestPayload := fmt.Sprintf(`<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 		<soap:Header>
@@ -103,12 +100,17 @@ func requestQuestionFromNIDA(c *gin.Context, r *http.Request, cfg mysql.Config) 
 		return RQVerificationResult{}, err
 	}
 
+	storeQuestion(Question{NIN: nin, Question: responseEnvelope.Body.Response.Body.Payload}, c)
+
+
 	return responseEnvelope.Body.Response, nil
 }
 
-func storeQuestion (c *gin.Context, cfg mysql.Config) {
-	var question Question
-	if err := c.ShouldBindJSON(&question); err != nil {
+func storeQuestion (q Question, c *gin.Context) {
+	//retrieve cfg database configuration
+	cfg := initCFG()
+
+	if err := c.ShouldBindJSON(&q); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -121,8 +123,13 @@ func storeQuestion (c *gin.Context, cfg mysql.Config) {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("INSERT INTO questions (nin, question) VALUES (?, ?)", question.NIN, question.Question)
+	_, err = db.Exec("INSERT INTO questions (nin, question) VALUES (?, ?)", q.NIN, q.Question)
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Question stored successfully"})
 }
 
