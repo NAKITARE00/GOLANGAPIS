@@ -95,7 +95,8 @@ func registerMerchant(c *gin.Context) {
 		return
 	}
 
-	// TODO: Add merchant to the database
+	// Add merchant to the database
+
 	db, err := dbase.NewMySQLStorage(cfg)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
