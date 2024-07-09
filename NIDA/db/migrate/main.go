@@ -26,6 +26,7 @@ func main() {
 	}
 
 	db, err := dbase.NewMySQLStorage(cfg)
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://db/migrate/migrations",
+		"file://migrations",
 		"mysql",
 		driver,
 	)
