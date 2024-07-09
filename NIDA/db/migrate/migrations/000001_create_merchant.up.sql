@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS merchants (
    `NIN`      INT UNSIGNED NOT NULL,
    `email` VARCHAR(255) NOT NULL,
    `status` ENUM('active', 'inactive') NOT NULL DEFAULT 'inactive',
-   `verification_attempts` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+   `verification_attempts` INT UNSIGNED NOT NULL,
    `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   
   PRIMARY KEY (id),
