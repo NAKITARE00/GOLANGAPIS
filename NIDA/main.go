@@ -84,6 +84,7 @@ type Config struct {
 
 func ReadConfig(filename string) (*Config, error) {
 	bs, err := os.ReadFile(filename)
+
 	if err != nil {
 		return nil, err
 	}

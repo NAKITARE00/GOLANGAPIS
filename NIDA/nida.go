@@ -106,16 +106,6 @@ func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVer
 	return responseEnvelope.Body.Response, nil
 }
 
-// func test(c *gin.Context) {
-// 	var questions = []Question{
-// 		{NIN: "123456", Question: "What is your favorite color?"},
-		
-// 	}
-
-// 	storeQuestion(questions[0], c)
-
-// }
-
 func storeQuestion(q Question, c *gin.Context) {
 	// Retrieve cfg database configuration
 	cfg := initCFG()

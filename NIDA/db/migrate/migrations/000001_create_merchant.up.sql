@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS merchants (
   
   PRIMARY KEY (id),
   UNIQUE KEY (email)
-)
+);
 
 --Adding index for columns that maybe frequently queried
 CREATE INDEX idx_merchant_firstName ON merchants (firstName);
