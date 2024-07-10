@@ -83,6 +83,7 @@ func verifyHandler(c *gin.Context) {
 
 	// Send the question back to the client
 	c.JSON(http.StatusOK, gin.H{"question": questionResponse})
+	
 }
 
 func registerMerchant(c *gin.Context) {

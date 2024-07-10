@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -39,27 +40,27 @@ type Question struct {
 }
 
 
-// func retrieveMerchantDetails(c *gin.Context) (merchantID string, err error) {
-// 	//retrieve cfg database configuration
-
+// func retrieveMerchantDetails(nin int) (Merchant, error) {
+// 	// Retrieve cfg database configuration
 // 	cfg := initCFG()
-	
+
 // 	db, err := dbase.NewMySQLStorage(cfg)
 // 	if err != nil {
-// 		return "", err
+// 		return Merchant{}, err
 // 	}
 // 	defer db.Close()
 
-// 	// query to get merchant details
-// 	query := "SELECT merchant_name, merchant_id FROM merchants WHERE some_condition = ?"
+// 	// Query to get merchant details
+// 	query := "SELECT merchant_name, merchant_id FROM merchants WHERE nin = ?"
 // 	var name, id string
-// 	err = db.QueryRow(query, "some_value").Scan(&name, &id)
+// 	err = db.QueryRow(query, nin).Scan(&name, &id)
 // 	if err != nil {
-// 		return "", err
+// 		return Merchant{}, err
 // 	}
 
-// 	return id, nil
+// 	return Merchant{FirstName: name, LastName: "LastName", Telephone: "Telephone", NIN: id, Email: "Email"}, nil
 // }
+
 
 
 func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVerificationResult, error) {
@@ -102,12 +103,21 @@ func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVer
 
 	storeQuestion(Question{NIN: nin, Question: responseEnvelope.Body.Response.Body.Payload}, c)
 
-
 	return responseEnvelope.Body.Response, nil
 }
 
-func storeQuestion (q Question, c *gin.Context) {
-	//retrieve cfg database configuration
+// func test(c *gin.Context) {
+// 	var questions = []Question{
+// 		{NIN: "123456", Question: "What is your favorite color?"},
+		
+// 	}
+
+// 	storeQuestion(questions[0], c)
+
+// }
+
+func storeQuestion(q Question, c *gin.Context) {
+	// Retrieve cfg database configuration
 	cfg := initCFG()
 
 	if err := c.ShouldBindJSON(&q); err != nil {
@@ -115,7 +125,7 @@ func storeQuestion (q Question, c *gin.Context) {
 		return
 	}
 
-	// TODO: Add question to the database
+	// Add question to the database
 	db, err := dbase.NewMySQLStorage(cfg)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -124,14 +134,18 @@ func storeQuestion (q Question, c *gin.Context) {
 	defer db.Close()
 
 	_, err = db.Exec("INSERT INTO questions (nin, question) VALUES (?, ?)", q.NIN, q.Question)
-
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Question already exists"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
-	
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Question stored successfully"})
 }
+
 
 func verifyAnswerWithNIDA(nin, rqCode, answer string) (RQVerificationResult, error) {
 	// Create the XML payload
