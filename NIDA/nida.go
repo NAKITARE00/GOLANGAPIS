@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/http"
+	"net/smtp"
 	"strings"
 	"time"
 
@@ -40,28 +41,55 @@ type Question struct {
 }
 
 
-// func retrieveMerchantDetails(nin int) (Merchant, error) {
-// 	// Retrieve cfg database configuration
-// 	cfg := initCFG()
+func retrieveMerchantDetails(nin string) (Merchant, error) {
+	// Retrieve cfg database configuration
+	cfg := initCFG()
 
-// 	db, err := dbase.NewMySQLStorage(cfg)
-// 	if err != nil {
-// 		return Merchant{}, err
-// 	}
-// 	defer db.Close()
+	db, err := dbase.NewMySQLStorage(cfg)
+	if err != nil {
+		return Merchant{}, err
+	}
+	defer db.Close()
 
-// 	// Query to get merchant details
-// 	query := "SELECT merchant_name, merchant_id FROM merchants WHERE nin = ?"
-// 	var name, id string
-// 	err = db.QueryRow(query, nin).Scan(&name, &id)
-// 	if err != nil {
-// 		return Merchant{}, err
-// 	}
+	// Query to get merchant details
+	query := "SELECT merchant_name, merchant_id, email FROM merchants WHERE nin = ?"
+	var name, id, email string
+	err = db.QueryRow(query, nin).Scan(&name, &id, &email)
+	if err != nil {
+		return Merchant{}, err
+	}
 
-// 	return Merchant{FirstName: name, LastName: "LastName", Telephone: "Telephone", NIN: id, Email: "Email"}, nil
-// }
+	return Merchant{FirstName: name, LastName: "LastName", Telephone: "Telephone", NIN: id, Email: email}, nil
+}
 
+func emailTrigger(nin string) {
+	// Retrieve merchant details
+	merchant, err := retrieveMerchantDetails(nin)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
+	// email details
+	from := "your-email@example.com"
+	password := "your-email-password"
+	to := []string{merchant.Email}
+	smtpHost := "smtp.example.com"
+	smtpPort := "587"
+
+	message := []byte(fmt.Sprintf("Subject: Notification\n\nHello %s,\n\nThis is a test email.", merchant.FirstName))
+
+	auth := smtp.PlainAuth("", from, password, smtpHost)
+
+	// Send email
+	err = smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, message)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	fmt.Println("Email sent successfully to", merchant.Email)
+}
 
 func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVerificationResult, error) {
 	// Create the XML payload
@@ -117,7 +145,7 @@ func storeQuestion(q Question, c *gin.Context) {
 
 	// Add question to the database
 	db, err := dbase.NewMySQLStorage(cfg)
-	if err != nil {
+	if (err != nil) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -135,7 +163,6 @@ func storeQuestion(q Question, c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Question stored successfully"})
 }
-
 
 func verifyAnswerWithNIDA(nin, rqCode, answer string) (RQVerificationResult, error) {
 	// Create the XML payload
@@ -160,7 +187,7 @@ func verifyAnswerWithNIDA(nin, rqCode, answer string) (RQVerificationResult, err
 		</soap:Body>
 	</soap:Envelope>`, time.Now().Format(time.RFC3339), "ClientIP", "UserID", "EncryptedCryptoKey", "EncryptedCryptoIV", nin, rqCode, answer, "Signature")
 
-	// Sendi the request to NIDA
+	// Send the request to NIDA
 	resp, err := http.Post("https://nacer01/TZ_CIG/GatewayService.svc?wsdl", "text/xml", bytes.NewBufferString(requestPayload))
 	if err != nil {
 		return RQVerificationResult{}, err

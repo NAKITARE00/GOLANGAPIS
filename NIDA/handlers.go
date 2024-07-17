@@ -86,6 +86,48 @@ func verifyHandler(c *gin.Context) {
 	
 }
 
+func emailHandler(c *gin.Context) {
+    // Retrieve the nin from the query parameters
+    nin := c.Query("nin")
+
+    if nin == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "nin parameter is required"})
+        return
+    }
+
+    // Call the emailTrigger function
+    emailTrigger(nin)
+
+    // Respond with a success message
+    c.JSON(http.StatusOK, gin.H{"message": "Email trigger initiated successfully"})
+}
+
+func verifyAnswerHandler(c *gin.Context) {
+	// Parse the request JSON body into a struct
+	type request struct {
+		NIN    string `json:"nin"`
+		RQCode string `json:"rq_code"`
+		Answer string `json:"answer"`
+	}
+
+	var req request
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Call the verifyAnswerWithNIDA function
+	result, err := verifyAnswerWithNIDA(req.NIN, req.RQCode, req.Answer)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the result as JSON
+	c.JSON(http.StatusOK, result)
+}
+
+
 func registerMerchant(c *gin.Context) {
 	//retrieve cfg database configuration
 	cfg := initCFG()

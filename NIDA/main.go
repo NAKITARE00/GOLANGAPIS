@@ -47,18 +47,18 @@ func initStorage (db *sql.DB) {
 }
 
 func initCFG() mysql.Config{
-		// Auto migrate tables
-		cfg := mysql.Config{
-			User:                 configs.Envs.DBUser,
-			Passwd:               configs.Envs.DBPassword,
-			Addr:                 configs.Envs.DBAddress,
-			DBName:               configs.Envs.DBName,
-			Net:                  "tcp",
-			AllowNativePasswords: true,
-			ParseTime:            true,
-		}
+	// Auto migrate tables
+	cfg := mysql.Config{
+		User:                 configs.Envs.DBUser,
+		Passwd:               configs.Envs.DBPassword,
+		Addr:                 configs.Envs.DBAddress,
+		DBName:               configs.Envs.DBName,
+		Net:                  "tcp",
+		AllowNativePasswords: true,
+		ParseTime:            true,
+	}
 	
-		return cfg
+	return cfg
 }
 
 func run() error {
@@ -72,6 +72,8 @@ func run() error {
 	router.POST("/verify", verifyHandler)
 	router.POST("/verify/v2", handlers.verify)
 	router.POST("/register", registerMerchant)
+	router.POST("/email", emailHandler)
+	router.POST("/verify-answer", verifyAnswerHandler)
 	return router.Run(":8080")
 }
 
