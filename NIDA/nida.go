@@ -7,10 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/smtp"
-	"strings"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ResponseHeader struct {
@@ -103,7 +100,7 @@ func emailTrigger(nin string) {
 	fmt.Println("Email sent successfully to", merchant.Email)
 }
 
-func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVerificationResult, error) {
+func requestQuestionFromNIDA(r *http.Request, nin string) (RQVerificationResult, error) {
 	// Create the XML payload
 	requestPayload := fmt.Sprintf(`<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
 		<soap:Header>
@@ -141,39 +138,7 @@ func requestQuestionFromNIDA(c *gin.Context, r *http.Request, nin string) (RQVer
 		return RQVerificationResult{}, err
 	}
 
-	storeQuestion(Question{NIN: nin, Question: responseEnvelope.Body.Response.Body.Payload}, c)
-
 	return responseEnvelope.Body.Response, nil
-}
-
-func storeQuestion(q Question, c *gin.Context) {
-	// Retrieve cfg database configuration
-	cfg := initCFG()
-
-	if err := c.ShouldBindJSON(&q); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Add question to the database
-	db, err := dbase.NewMySQLStorage(cfg)
-	if (err != nil) {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	defer db.Close()
-
-	_, err = db.Exec("INSERT INTO questions (nin, question) VALUES (?, ?)", q.NIN, q.Question)
-	if err != nil {
-		if strings.Contains(err.Error(), "Duplicate entry") {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Question already exists"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Question stored successfully"})
 }
 
 func verifyAnswerWithNIDA(nin, rqCode, answer string) (RQVerificationResult, error) {

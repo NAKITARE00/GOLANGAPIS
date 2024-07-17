@@ -75,7 +75,7 @@ func verifyHandler(c *gin.Context) {
 	}
 
 	// Request the first question from NIDA
-	questionResponse, err := requestQuestionFromNIDA(c, sampleRequest, payload.NIN)
+	questionResponse, err := requestQuestionFromNIDA(sampleRequest, payload.NIN)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
