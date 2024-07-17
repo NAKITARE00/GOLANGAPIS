@@ -70,6 +70,16 @@ func emailTrigger(nin string) {
 		return
 	}
 
+	// Generate a unique token
+	token, err := generateToken()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Store the token with a 10-minute expiration
+	storeToken(token, 10*time.Minute)
+
 	// email details
 	from := "your-email@example.com"
 	password := "your-email-password"
@@ -77,7 +87,9 @@ func emailTrigger(nin string) {
 	smtpHost := "smtp.example.com"
 	smtpPort := "587"
 
-	message := []byte(fmt.Sprintf("Subject: Notification\n\nHello %s,\n\nThis is a test email.", merchant.FirstName))
+	// Create the link
+	link := fmt.Sprintf("https://yourdomain.com/verify?token=%s", token)
+	message := []byte(fmt.Sprintf("Subject: Notification\n\nHello %s,\n\nPlease click the link below to verify:\n\n%s\n\nThis link will expire in 10 minutes.", merchant.FirstName, link))
 
 	auth := smtp.PlainAuth("", from, password, smtpHost)
 

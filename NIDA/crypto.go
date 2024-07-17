@@ -13,6 +13,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"time"
 )
 
 const privateKeyPEM = `-----BEGIN RSA PRIVATE KEY-----
@@ -138,6 +139,7 @@ func encryptPayload(payload string, aesKey, aesIV []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+
 func signPayload(payload string, privateKey *rsa.PrivateKey) (string, error) {
 	h := sha1.New()
 	h.Write([]byte(payload))
@@ -174,4 +176,33 @@ func verifySignature(payload, signature string, publicKey *rsa.PublicKey) error 
 	hashed := h.Sum(nil)
 
 	return rsa.VerifyPKCS1v15(publicKey, crypto.SHA1, hashed, sig)
+}
+
+//Email link expiration
+
+// Generate a unique token
+func generateToken() (string, error) {
+	b := make([]byte, 16)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// Store token in database (simulated with a map)
+var tokenStore = make(map[string]time.Time)
+
+func storeToken(token string, expiration time.Duration) {
+	expiryTime := time.Now().Add(expiration)
+	tokenStore[token] = expiryTime
+}
+
+// Check if token is valid
+func isValidToken(token string) bool {
+	expiryTime, exists := tokenStore[token]
+	if !exists {
+		return false
+	}
+	return time.Now().Before(expiryTime)
 }
